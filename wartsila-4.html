@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wärtsilä Sustainability Dashboard</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome (Updated to latest free CDN) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Leaflet for Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js for Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #ffffff, #f5f6f5);
+      color: #000000;
+      padding: 30px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 20px 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+      margin-bottom: 40px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    header img {
+      height: 70px;
+      transition: transform 0.3s ease;
+    }
+
+    header img:hover {
+      transform: scale(1.1);
+    }
+
+    .title-group {
+      text-align: center;
+      flex: 1;
+    }
+
+    .title-group h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #0a6795;
+      margin: 0;
+    }
+
+    .title-group p {
+      font-size: 16px;
+      color: #666666;
+      margin: 8px 0 0;
+    }
+
+    .datetime {
+      font-size: 14px;
+      font-weight: 400;
+      color: #666666;
+    }
+
+    .kpi-header {
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #yearSelect {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .kpi-card {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      padding: 25px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 12px 40px rgba(10, 103, 149, 0.2);
+    }
+
+    .kpi-card i {
+      font-size: 36px;
+      margin-bottom: 15px;
+      color: #0a6795;
+    }
+
+    .kpi-card h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin: 0;
+      color: #000000;
+    }
+
+    .kpi-card p {
+      font-size: 14px;
+      color: #666666;
+      margin: 10px 0 0;
+    }
+
+    .kpi-diff {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    .kpi-diff.positive {
+      color: #2ecc71;
+    }
+
+    .kpi-diff.negative {
+      color: #e67e22;
+    }
+
+    .progress-section {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 40px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .progress-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 25px;
+      color: #0a6795;
+    }
+
+    .bar-container {
+      margin-bottom: 25px;
+    }
+
+    .bar-label {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #000000;
+    }
+
+    .bar {
+      width: 100%;
+      height: 28px;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      text-align: right;
+      padding-right: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 28px;
+      color: #ffffff;
+      transition: width 0.6s ease-in-out;
+    }
+
+    .wartsila-orange { background: #fd7422; }
+    .wartsila-blue { background: #0a6795; }
+    .wartsila-grey { background: #666666; }
+
+    .chart-section {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 40px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .chart-section h3 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #0a6795;
+      margin-bottom: 20px;
+    }
+
+    .chart-box {
+      flex: 1 1 30%;
+      min-width: 280px;
+    }
+
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
+
+    #energyChart, #co2Chart, #waterRadarChart {
+      max-height: 300px;
+    }
+
+    .map-updates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .map-panel, .updates-panel {
+      flex: 1 1 340px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    #map {
+      height: 260px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+
+    .map-panel h3, .updates-panel h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #0a6795;
+      margin-bottom: 20px;
+    }
+
+    .map-panel ul, .updates-panel ul {
+      font-size: 14px;
+      padding-left: 20px;
+      color: #666666;
+      margin: 0;
+    }
+
+    .updates-panel ul li {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    .updates-panel a {
+      color: #fd7422;
+      text-decoration: none;
+      font-weight: 500;
+      margin-left: 10px;
+      font-size: 13px;
+    }
+
+    .updates-panel a:hover {
+      text-decoration: underline;
+      color: #0a6795;
+    }
+
+    .scroll-container {
+      position: relative;
+      overflow: hidden;
+      flex: 1;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+
+    .scroll-list {
+      position: absolute;
+      width: 100%;
+      animation: scrollNews 30s linear infinite;
+    }
+
+    @keyframes scrollNews {
+      0% { top: 0%; }
+      100% { top: -100%; }
+    }
+
+    .milestone-wrapper {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+
+    .timeline-section {
+      flex: 1 1 300px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      padding: 30px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .timeline-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #0a6795;
+      margin-bottom: 20px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #fd7422;
+      border-radius: 2px;
+    }
+
+    .timeline-item {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -28px;
+      top: 5px;
+      width: 16px;
+      height: 16px;
+      background: #0a6795;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+    }
+
+    .timeline-item h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #000000;
+      margin-bottom: 5px;
+    }
+
+    .timeline-item p {
+      font-size: 14px;
+      color: #666666;
+    }
+
+    .impact-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .impact-card {
+      background: rgba(255, 255, 255, 0.8);
+      padding: 25px;
+      border-radius: 20px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s ease;
+    }
+
+    .impact-card:hover {
+      transform: translateY(-10px);
+    }
+
+    .impact-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #0a6795;
+    }
+
+    .impact-card p {
+      font-size: 14px;
+      color: #666666;
+    }
+
+    .impact-card a {
+      color: #fd7422;
+      text-decoration: none;
+      font-weight: 500;
+      margin-top: 10px;
+      display: inline-block;
+    }
+
+    .impact-card a:hover {
+      text-decoration: underline;
+      color: #0a6795;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 14px;
+      color: #666666;
+      margin-top: 40px;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .social-icons {
+      margin: 20px 0;
+    }
+
+    .social-icons a {
+      margin: 0 15px;
+      color: #0a6795;
+      font-size: 22px;
+      text-decoration: none;
+      transition: color 0.3s ease, transform 0.3s ease;
+    }
+
+    .social-icons a:hover {
+      color: #fd7422;
+      transform: scale(1.3);
+    }
+
+    footer a.website-link {
+      color: #0a6795;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    footer a.website-link:hover {
+      text-decoration: underline;
+      color: #fd7422;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        text-align: center;
+        gap: 20px;
+      }
+
+      .title-group h1 {
+        font-size: 26px;
+      }
+
+      .kpis {
+        grid-template-columns: 1fr;
+      }
+
+      .map-updates {
+        flex-direction: column;
+      }
+
+      .impact-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    #chatbot-container {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 280px;
+      background: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      font-family: 'Poppins', sans-serif;
+      z-index: 9999;
+      overflow: hidden;
+    }
+
+    #chatbot-header {
+      background: #0a6795;
+      color: #ffffff;
+      padding: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    #chatbot-body {
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      background: #f9f9f9;
+	    
+    }
+
+    #chat-log {
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    #chat-log div {
+      margin-bottom: 6px;
+    }
+
+    #chat-log .user { text-align: right; }
+    #chat-log .bot { text-align: left; color: #0a6795; }
+
+    #chat-input {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    #chatbot-close {
+      float: right;
+      cursor: pointer;
+      font-size: 16px;
+      margin-left: 10px;
+    }
+
+    #chatbot-restart {
+      margin-top: 6px;
+      width: 100%;
+      padding: 6px;
+      font-size: 13px;
+      border: none;
+      background-color: #0a6795;
+      color: #ffffff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #chatbot-restart:hover {
+      background-color: #094f71;
+    }
+  </style>
+</head>
+<body>
+<!-- Chatbot Widget -->
+<div id="chatbot-container">
+  <div id="chatbot-header">
+    Green Genie 
+    <span id="chatbot-close" title="Close">✖</span>
+  </div>
+  <div id="chatbot-body">
+    <div id="chat-log"></div>
+    <input type="text" id="chat-input" placeholder="Ask something..." />
+    <button id="chatbot-restart">Restart</button>
+  </div>
+</div>
+
+<header>
+  <img src="C:\Users\Admin\Downloads/W_logo_color_pos_low.png" alt="Wärtsilä Logo" style="height:120px"/>
+  <div class="title-group">
+    <h1>Sustainability Dashboard</h1>
+    <p>Driving Towards ‘Set for 30’ Carbon-Neutral Excellence</p>
+  </div>
+  <div class="datetime">
+    <script>document.write(new Date().toLocaleString());</script>
+  </div>
+</header>
+
+<div class="kpi-header">
+  <label for="yearSelect">Select Financial Year:</label>
+  <select id="yearSelect">
+    <option value="2025">2025</option>
+    <option value="2024">2024</option>
+    <option value="2023">2023</option>
+  </select>
+</div>
+
+<div class="kpis" id="kpiContainer">
+  <!-- Cards will be generated by JavaScript -->
+</div>
+
+<div class="progress-section">
+  <div class="progress-title">Set for 30 Targets</div>
+  <div id="progressContainer">
+    <!-- Progress bars will be generated by JavaScript -->
+  </div>
+</div>
+
+<div class="chart-section">
+  <div class="chart-box">
+    <h3>Energy Consumption Trend</h3>
+    <canvas id="energyChart"></canvas>
+  </div>
+
+  <div class="chart-box">
+    <h3>CO2 Emissions</h3>
+    <canvas id="co2Chart"></canvas>
+  </div>
+
+  <div class="chart-box">
+    <h3>Water Usage by Area</h3>
+    <label for="waterSiteSelect">Select Project:</label><br>
+    <select id="waterSiteSelect">
+      <option value="vaasa">Vaasa Smart Technology Hub</option>
+      <option value="curacao">Curaçao Renewable Project</option>
+      <option value="kentucky">Kentucky Balancing Plant</option>
+      <option value="madagascar">QIT Madagascar Microgrid</option>
+      <option value="australia">Eraring Battery, Australia</option>
+      <option value="singapore">Singapore Maritime Simulator</option>
+      <option value="nigeria">Mangal Cement, Nigeria</option>
+      <option value="norway">Ammonia Ship Project, Norway</option>
+    </select>
+    <canvas id="waterRadarChart"></canvas>
+  </div>
+
+  <div class="chart-insights" style="margin-top: 30px;">
+    <h3>Key Observations</h3>
+    <p><strong>Energy Consumption Trend (2020–2025)</strong><br>
+    There is a clear downward trend in energy consumption from 2020 to 2025. It has reduced from around 1,200 GWh in 2020 to 800 GWh in 2025. This steady drop shows that energy-saving efforts have been working well over the years.</p>
+
+    <p><strong>CO2 Emissions (2020–2025)</strong><br>
+    CO2 emissions are also showing a steady decrease. They have come down from about 290 tons in 2020 to nearly 200 tons in 2025. This reduction is likely linked to the lower energy usage and shift towards cleaner energy sources.</p>
+
+    <p>Overall, both charts show positive progress in reducing energy use and lowering emissions over time.</p>
+  </div>
+</div>
+
+<div class="map-updates">
+  <div class="map-panel">
+    <h3>Select Focus Area</h3>
+    <select id="locationSelect" style="width: 100%; padding: 8px; margin-bottom: 12px; border-radius: 6px;">
+      <option value="vaasa">Vaasa Smart Technology Hub</option>
+      <option value="curacao">Curaçao Renewable Project</option>
+      <option value="kentucky">Kentucky Balancing Plant</option>
+      <option value="madagascar">QIT Madagascar Microgrid</option>
+      <option value="australia">Eraring Battery, Australia</option>
+      <option value="singapore">Singapore Maritime Simulator</option>
+      <option value="nigeria">Mangal Cement, Nigeria</option>
+      <option value="norway">Ammonia Ship Project, Norway</option>
+    </select>
+
+    <div id="map"></div>
+    <ul id="locationDetails"></ul>
+    <a href="#" class="click-here">Click Here for Details</a>
+  </div>
+
+    <style>
+  .updates-panel {
+    flex: 1 1 340px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 30px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .map-panel h3,
+  .updates-panel h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #0a6795;
+    margin-bottom: 20px;
+  }
+
+  .map-panel ul,
+  .updates-panel ul {
+    font-size: 14px;
+    padding-left: 20px;
+    color: #666666;
+    margin: 0;
+  }
+
+  .scroll-container {
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  .scroll-list {
+    position: absolute;
+    width: 100%;
+    animation: scrollNews 30s linear infinite;
+  }
+
+  .scroll-list li {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+  }
+
+  .scroll-list a {
+    color: #fd7422;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 10px;
+    font-size: 13px;
+  }
+
+  .scroll-list a:hover {
+    text-decoration: underline;
+    color: #0a6795;
+  }
+
+  .timeline-section {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 40px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  #map {
+    height: 260px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+  }
+
+  @keyframes scrollNews {
+    0% { top: 0%; }
+    100% { top: -100%; }
+  }
+</style>
+<div class="updates-panel">
+  <h3>Latest Sustainability News</h3>
+  <div class="scroll-container">
+    <ul class="scroll-list">
+      <li>New solar panels installed at Vaasa – July 2025 <a href="#">Click Here</a></li>
+      <li>Employee training completed – 94% participation <a href="#">Click Here</a></li>
+      <li>Next plastic audit scheduled – Sep 2025 <a href="#">Click Here</a></li>
+      <li>Hybrid engine prototype unveiled – June 2025 <a href="#">Click Here</a></li>
+      <li>Community clean-up event planned – Aug 2025 <a href="#">Click Here</a></li>
+      <li>Vaasa factory achieves 72% CO₂ reduction <a href="#">Click Here</a></li>
+      <li>Wärtsilä joins EU green hydrogen task force <a href="#">Click Here</a></li>
+      <li>Battery system delivered to Australia – May 2025 <a href="#">Click Here</a></li>
+      <li>New simulator launched in Singapore <a href="#">Click Here</a></li>
+      <li>Wärtsilä wins global maritime ESG award <a href="#">Click Here</a></li>
+      <li>Plastic use dropped 43% over 3 years <a href="#">Click Here</a></li>
+      <li>New solar-powered HQ opened in Kenya <a href="#">Click Here</a></li>
+      <li>Biofuel trial completed on test vessel <a href="#">Click Here</a></li>
+      <li>AI-based carbon tracking app launched <a href="#">Click Here</a></li>
+      <li>Wärtsilä’s 2030 roadmap endorsed by UN body <a href="#">Click Here</a></li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="milestone-wrapper">
+  <div class="timeline-section">
+    <div class="timeline-title">Sustainability Milestones</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h4>2020: Launched ‘Set for 30’</h4>
+        <p>Initiated ambitious carbon-neutral goals for 2030.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2022: Solar Panel Installation</h4>
+        <p>First solar array installed at Vaasa Hub.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2024: Waste Recycling Milestone</h4>
+        <p>Achieved 68% waste recycling across facilities.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2025: Hybrid Engine Prototype</h4>
+        <p>Unveiled eco-friendly engine for maritime use.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline-section">
+    <div class="timeline-title">Innovation Highlights</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h4>2023: AI Carbon Tracker</h4>
+        <p>Launched internal AI-based emissions monitoring tool.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2024: GEMS Upgrade</h4>
+        <p>Updated Wärtsilä GEMS platform for better grid integration.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2025: Smart Engine Labs</h4>
+        <p>Prototype testing of digital-twin-based fuel engines begins.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2026: Battery-Grid Pilot</h4>
+        <p>Decentralised battery control pilot deployed in Australia.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline-section">
+    <div class="timeline-title">Community Engagements</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h4>2022: Outreach Drive</h4>
+        <p>Conducted 12 school awareness sessions on clean energy.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2024: Maritime Training</h4>
+        <p>Launched Wärtsilä Academy in Singapore for crew upskilling.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2025: Green Stories Campaign</h4>
+        <p>Short videos and visual stories shared via global platforms.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>2026: Public Podcast Series</h4>
+        <p>“Green Power Talks” podcast for global climate learners.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="impact-section">
+  <div class="impact-card">
+    <h3>Employees</h3>
+    <p>16,000+ trained in sustainability practices</p>
+    <a href="#" class="click-here">Click Here for Training Details</a>
+  </div>
+  <div class="impact-card">
+    <h3>Community</h3>
+    <p>12 outreach events held this year</p>
+    <a href="#" class="click-here">Click Here for Event Calendar</a>
+  </div>
+  <div class="impact-card">
+    <h3>Government</h3>
+    <p>100% compliance with Finnish ESG laws</p>
+    <a href="#" class="click-here">Click Here for Compliance Report</a>
+  </div>
+  <div class="impact-card">
+    <h3>Global Impact</h3>
+    <p>Reduced 1.2M tons of CO2 globally since 2020</p>
+    <a href="#" class="click-here">Click Here for Impact Report</a>
+  </div>
+</div>
+
+<footer style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+  Data updated monthly – For internal and public use
+  <div id="visitor-count" style="margin: 10px 0;font-weight: 500;color: #000000;background: yellow;"">
+    Total Visitors: <span id="visitor-number">0</span>
+  </div>
+  <div class="social-icons" style="margin: 15px 0;">
+    <a href="https://www.linkedin.com/company/wartsila" target="_blank" style="margin: 0 10px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn Logo" style="height: 32px; vertical-align: middle;" onerror="this.src='https://via.placeholder.com/32?text=LinkedIn';">
+    </a>
+    <a href="https://www.instagram.com/wartsilacorp" target="_blank" style="margin: 0 10px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram Logo" style="height: 32px; vertical-align: middle;" onerror="this.src='https://via.placeholder.com/32?text=Instagram';">
+    </a>
+    <a href="https://x.com/WartsilaCorp" target="_blank" style="margin: 0 10px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/X_logo.jpg" alt="X Logo" style="height: 32px; vertical-align: middle;" onerror="this.src='https://via.placeholder.com/32?text=X';">
+    </a>
+    <a href="https://www.youtube.com/user/WartsilaCorporation" target="_blank" style="margin: 0 10px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YouTube Logo" style="height: 32px; vertical-align: middle;" onerror="this.src='https://via.placeholder.com/32?text=YouTube';">
+    </a>
+  </div>
+  <div>
+    <a href="https://www.wartsila.com/sustainability" target="_blank" class="website-link" style="color: #0066cc; text-decoration: none;">www.wartsila.com/sustainability</a>
+  </div>
+</footer>
+
+<script>
+  // Visitor Count Logic
+  window.addEventListener("DOMContentLoaded", () => {
+    let visitorCount = parseInt(localStorage.getItem("visitorCount")) || 0;
+    visitorCount += 1;
+    localStorage.setItem("visitorCount", visitorCount);
+    document.getElementById("visitor-number").textContent = visitorCount;
+  });
+
+  const yearData = {
+    2025: {
+      kpis: {
+        carbon: -37,
+        energy: 22,
+        waste: 68,
+		supplychain: 69,
+        plastic: -43,
+        renewable: 85,
+        electricity: 60,
+        trif: 2.20
+      },
+      progress: [
+        { label: "Carbon Neutral Vaasa Factory", value: 72, color: "wartsila-orange" },
+        { label: "100% Renewable Energy Target", value: 56, color: "wartsila-blue" },
+        { label: "Zero Landfill Waste Goal", value: 80, color: "wartsila-orange" },
+        { label: "Water Usage Reduction", value: 65, color: "wartsila-blue" }
+      ]
+    },
+    2024: {
+      kpis: {
+        carbon: -33,
+        energy: 20,
+        waste: 64,
+		supplychain: 61,
+        plastic: -39,
+        renewable: 78,
+        electricity: 58,
+        trif: 2.50
+      },
+      progress: [
+        { label: "Carbon Neutral Vaasa Factory", value: 68, color: "wartsila-orange" },
+        { label: "100% Renewable Energy Target", value: 50, color: "wartsila-blue" },
+        { label: "Zero Landfill Waste Goal", value: 75, color: "wartsila-orange" },
+        { label: "Water Usage Reduction", value: 60, color: "wartsila-blue" }
+      ]
+    },
+    2023: {
+      kpis: {
+        carbon: -30,
+        energy: 18,
+        waste: 60,
+		supplychain: 55,
+        plastic: -35,
+        renewable: 70,
+        electricity: 55,
+        trif: 2.80
+      },
+      progress: [
+        { label: "Carbon Neutral Vaasa Factory", value: 62, color: "wartsila-orange" },
+        { label: "100% Renewable Energy Target", value: 45, color: "wartsila-blue" },
+        { label: "Zero Landfill Waste Goal", value: 70, color: "wartsila-orange" },
+        { label: "Water Usage Reduction", value: 55, color: "wartsila-blue" }
+      ]
+    }
+  };
+
+  const kpiIcons = {
+    carbon: "fas fa-globe-europe",
+    energy: "fas fa-bolt",
+    waste: "fas fa-recycle",
+	supplychain: "fas fa-truck",
+    plastic: "fas fa-prescription-bottle-alt",
+    renewable: "fas fa-leaf",
+    electricity: "fas fa-leaf",
+    trif: "fas fa-leaf"
+  };
+
+  const kpiLabels = {
+    carbon: "Carbon Emissions vs 2019",
+    energy: "Energy Efficiency since 2020",
+    waste: "Waste Recycled",
+	supplychain: "Supply Chain Waste",
+    plastic: "Plastic Use in 3 Years",
+    renewable: "Renewable Energy Adoption",
+    electricity: "Renewable electricity use",
+    trif: "TRIF safety score"
+  };
+
+  const kpiContainer = document.getElementById("kpiContainer");
+  const progressContainer = document.getElementById("progressContainer");
+  const yearSelect = document.getElementById("yearSelect");
+
+  function renderKPIs(year) {
+    kpiContainer.innerHTML = "";
+    const current = yearData[year].kpis;
+    const previous = getPreviousData(year);
+
+    for (let key in current) {
+      const currentValue = current[key];
+      const previousValue = previous ? previous.kpis[key] : null;
+      let diff = "";
+      let diffClass = "";
+
+      if (previousValue !== null) {
+        const change = currentValue - previousValue;
+        if (change > 0) {
+          diff = `Improved by ${Math.abs(change)}`;
+          diffClass = "positive";
+        } else if (change < 0) {
+          diff = `Dropped by ${Math.abs(change)}`;
+          diffClass = "negative";
+        } else {
+          diff = `No change`;
+          diffClass = "";
+        }
+      }
+
+      const card = document.createElement("div");
+      card.className = "kpi-card";
+      card.innerHTML = `
+        <i class="${kpiIcons[key]}"></i>
+        <h2>${currentValue}${key === "trif" ? "" : "%"}</h2>
+        <p>${kpiLabels[key]}</p>
+        ${diff ? `<div class="kpi-diff ${diffClass}">${diff}</div>` : ""}
+      `;
+      kpiContainer.appendChild(card);
+    }
+  }
+
+  function renderProgress(year) {
+    progressContainer.innerHTML = "";
+    const progressItems = yearData[year].progress;
+
+    progressItems.forEach(item => {
+      const barContainer = document.createElement("div");
+      barContainer.className = "bar-container";
+      barContainer.innerHTML = `
+        <div class="bar-label">${item.label} – ${item.value}% Complete</div>
+        <div class="bar">
+          <div class="bar-fill ${item.color}" style="width: ${item.value}%;">${item.value}%</div>
+        </div>
+      `;
+      progressContainer.appendChild(barContainer);
+    });
+  }
+
+  function getPreviousData(currentYear) {
+    const years = Object.keys(yearData).sort().reverse();
+    const idx = years.indexOf(currentYear);
+    if (idx < years.length - 1) return yearData[years[idx + 1]];
+    return null;
+  }
+
+  function updateDashboard(year) {
+    renderKPIs(year);
+    renderProgress(year);
+  }
+
+  yearSelect.addEventListener("change", () => {
+    updateDashboard(yearSelect.value);
+  });
+
+  // Initialize with latest year
+  updateDashboard("2025");
+
+  // === Energy Consumption Chart ===
+  const energyCtx = document.getElementById('energyChart').getContext('2d');
+  new Chart(energyCtx, {
+    type: 'line',
+    data: {
+      labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
+      datasets: [{
+        label: 'Energy Consumption (GWh)',
+        data: [1200, 1100, 1000, 900, 850, 800],
+        borderColor: '#fd7422',
+        backgroundColor: 'rgba(253, 116, 34, 0.2)',
+        fill: true,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: { color: '#666666' },
+          grid: { color: 'rgba(0, 0, 0, 0.1)' }
+        },
+        x: {
+          ticks: { color: '#666666' },
+          grid: { color: 'rgba(0, 0, 0, 0.1)' }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#666666' } }
+      }
+    }
+  });
+
+  // === CO2 Emissions Chart ===
+  const co2Ctx = document.getElementById('co2Chart').getContext('2d');
+  new Chart(co2Ctx, {
+    type: 'bar',
+    data: {
+      labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
+      datasets: [{
+        label: 'CO2 Emissions (tons)',
+        data: [300, 280, 260, 240, 220, 200],
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: '#369CEB',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#666666' },
+          grid: { color: 'rgba(0, 0, 0, 0.1)' }
+        },
+        x: {
+          ticks: { color: '#666666' },
+          grid: { color: 'rgba(0, 0, 0, 0.1)' }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#666666' } }
+      }
+    }
+  });
+
+  // === Radar Chart for Water Usage ===
+  const waterDataBySite = {
+    vaasa: [40, 60, 30, 50, 20],
+    curacao: [30, 40, 35, 60, 25],
+    kentucky: [50, 65, 40, 45, 35],
+    madagascar: [25, 30, 20, 35, 15],
+    australia: [55, 70, 50, 65, 40],
+    singapore: [45, 60, 35, 55, 30],
+    nigeria: [60, 75, 55, 50, 45],
+    norway: [35, 50, 30, 40, 25]
+  };
+
+  const categories = ['Cooling', 'Processing', 'Sanitation', 'Irrigation', 'Domestic'];
+
+  const radarCtx = document.getElementById('waterRadarChart').getContext('2d');
+  const radarChart = new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: categories,
+      datasets: [{
+        label: 'Water Consumption (units)',
+        data: waterDataBySite['vaasa'],
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        borderColor: '#369CEB',
+        borderWidth: 2,
+        pointBackgroundColor: '#369CEB'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        title: {
+          display: true,
+          text: 'Water Consumption by Category'
+        }
+      },
+      scales: {
+        r: {
+          angleLines: { color: 'rgba(0,0,0,0.1)' },
+          grid: { color: 'rgba(0,0,0,0.1)' },
+          pointLabels: { color: '#333' },
+          ticks: {
+            color: '#666',
+            beginAtZero: true,
+            stepSize: 10
+          }
+        }
+      }
+    }
+  });
+
+  document.getElementById('waterSiteSelect').addEventListener('change', function () {
+    const selectedSite = this.value;
+    radarChart.data.datasets[0].data = waterDataBySite[selectedSite];
+    radarChart.update();
+  });
+
+  const focusAreas = {
+    vaasa: {
+      coords: [63.096, 21.615],
+      details: [
+        "Carbon-neutral operations in progress",
+        "Smart energy monitoring system active",
+        "Staff sustainability training ongoing",
+        "Zero-emission transport pilot launched"
+      ]
+    },
+    curacao: {
+      coords: [12.169, -68.99],
+      details: [
+        "25 MW / 25 MWh battery project live",
+        "New 38 MW engine power plant commissioned",
+        "100% renewable roadmap under planning"
+      ]
+    },
+    kentucky: {
+      coords: [37.8, -85.0],
+      details: [
+        "New Wärtsilä 50SG engines operational",
+        "Supports grid flexibility for renewables",
+        "Helps reduce market volatility impact"
+      ]
+    },
+    madagascar: {
+      coords: [-18.7669, 46.8691],
+      details: [
+        "Microgrid with renewables and storage",
+        "First Wärtsilä decarbonisation agreement",
+        "Lifecycle optimisation in progress"
+      ]
+    },
+    australia: {
+      coords: [-33.0, 151.6],
+      details: [
+        "Eraring battery now 700 MW / 2800 MWh",
+        "Largest project in Southern Hemisphere",
+        "Wärtsilä GEMS controls grid interaction"
+      ]
+    },
+    singapore: {
+      coords: [1.3521, 103.8198],
+      details: [
+        "Dual-fuel simulator deployed",
+        "Supports future-ready crew training",
+        "First-of-its-kind maritime upskilling"
+      ]
+    },
+    nigeria: {
+      coords: [6.5244, 3.3792],
+      details: [
+        "10-year O&M deal with Mangal Cement",
+        "On-site generation improves stability",
+        "Remote operation with guaranteed uptime"
+      ]
+    },
+    norway: {
+      coords: [60.472, 8.4689],
+      details: [
+        "Viking Energy to run on ammonia",
+        "First in-service ammonia ship in world",
+        "Conversion underway for 2026 launch"
+      ]
+    }
+  };
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const selectEl = document.getElementById("locationSelect");
+    const detailsEl = document.getElementById("locationDetails");
+
+    const initialArea = focusAreas["vaasa"];
+    const map = L.map('map').setView(initialArea.coords, 3);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const marker = L.marker(initialArea.coords).addTo(map)
+      .bindPopup("Vaasa Smart Technology Hub")
+      .openPopup();
+
+    function updateFocusArea(areaKey) {
+      const area = focusAreas[areaKey];
+      marker.setLatLng(area.coords)
+        .setPopupContent(selectEl.options[selectEl.selectedIndex].text)
+        .openPopup();
+      map.setView(area.coords, 4);
+      detailsEl.innerHTML = "";
+      area.details.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        detailsEl.appendChild(li);
+      });
+    }
+
+    selectEl.addEventListener("change", function () {
+      updateFocusArea(this.value);
+    });
+
+    updateFocusArea("vaasa");
+  });
+
+  // Chatbot Script
+  const chatbotHeader = document.getElementById('chatbot-header');
+  const chatbotBody = document.getElementById('chatbot-body');
+  const chatLog = document.getElementById('chat-log');
+  const chatInput = document.getElementById('chat-input');
+  const chatbotClose = document.getElementById('chatbot-close');
+  const chatbotRestart = document.getElementById('chatbot-restart');
+
+  // Toggle chat open/close
+  chatbotHeader.addEventListener('click', () => {
+    if (chatbotBody.style.display === 'flex') {
+      chatbotBody.style.display = 'none';
+    } else {
+      chatbotBody.style.display = 'flex';
+      chatLog.innerHTML = ''; // Clear previous
+      welcomeMessage(); // Show welcome
+    }
+  });
+
+  // Close chatbot
+  chatbotClose.addEventListener('click', (e) => {
+    e.stopPropagation(); // stop toggle
+    chatbotBody.style.display = 'none';
+  });
+
+  // Restart chatbot
+  chatbotRestart.addEventListener('click', () => {
+    chatLog.innerHTML = '';
+    welcomeMessage();
+  });
+
+  // On enter key
+  chatInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && this.value.trim() !== '') {
+      const userMessage = this.value.trim();
+      addMessage('user', userMessage);
+      respond(userMessage.toLowerCase());
+      this.value = '';
+    }
+  });
+
+  function addMessage(sender, text) {
+    const message = document.createElement('div');
+    message.className = sender;
+    message.innerText = text;
+    chatLog.appendChild(message);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function welcomeMessage() {
+    addMessage('bot', "Hi, I’m your dashboard assistant. Ask me anything like 'carbon data', 'energy usage', or 'Vaasa site'.");
+  }
+
+  function respond(msg) {
+    let reply = "Sorry, I don't know that. Try asking about KPIs, energy, or map.";
+
+  if (msg.includes("carbon")) {
+    reply = "Carbon emissions have reduced steadily from 2020 to 2025.";
+  } else if (msg.includes("energy")) {
+    reply = "Energy usage dropped from 1200 GWh in 2020 to 800 GWh in 2025.";
+  } else if (msg.includes("co2")) {
+    reply = "CO₂ emissions came down from 300 tons to 200 tons.";
+  } else if (msg.includes("water")) {
+    reply = "Water usage varies by site. Please select a project from dropdown.";
+  } else if (msg.includes("plastic")) {
+    reply = "Plastic usage has dropped by 43% over 3 years.";
+  } else if (msg.includes("vaasa")) {
+    reply = "Vaasa Hub is moving towards carbon-neutral with solar energy and clean transport.";
+  } else if (msg.includes("renewable")) {
+    reply = "Renewable energy use is at 85% as of 2025.";
+  } else if (msg.includes("safety") || msg.includes("trif")) {
+    reply = "TRIF safety score is 2.20 in 2025, better than previous years.";
+  }
+
+  addMessage('bot', reply);
+}
+  </script>
+  <script>
+  window.onload = function () {
+  welcomeMessage();
+};
+</script>
+</body>
+</html>
